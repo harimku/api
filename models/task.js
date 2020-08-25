@@ -20,8 +20,9 @@ const taskSchema = new Schema({
         required: true
     },
     duedate: {
-        type: Number,  //change to Date type
-        required: true
+        type: Date,
+        required: true,
+        default: Date.now()
     }
 }, {
     timestamps: true
