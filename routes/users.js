@@ -9,8 +9,14 @@ userRouter.use(bodyParser.json());
 
 userRouter
     .route('/')
-    .get(function(req, res) {
-        res.send('Display all user accounts');
+    .get(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+        User.find()
+            .then((users) => {
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.json(users);
+            })
+            .catch((err) => next(err));
     });
 
 userRouter
