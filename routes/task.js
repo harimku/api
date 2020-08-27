@@ -11,14 +11,16 @@ taskRouter
     .route('/')
     .get(authenticate.verifyUser, (req, res, next) => {
         Task.find()   //returns promise
-            .then(tasks => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(tasks);
-            })
-            .catch(err => next(err));   //pass err off to the overall error handler for this express application
+            .populate('author')
+                .then(tasks => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(tasks);
+                })
+                .catch(err => next(err));   //pass err off to the overall error handler for this express application
     })
     .post(authenticate.verifyUser, (req, res, next) => {
+        req.body.author = req.user._id;
         Task.create(req.body)   //returns promise (mongoose checks if data fits schema)
             .then(task => {
                 console.log('Task Created: ', task);
@@ -46,12 +48,13 @@ taskRouter
     .route('/:taskId')
     .get(authenticate.verifyUser, (req, res, next) => {
         Task.findById(req.params.taskId)
-            .then(task => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(task);
-            })
-            .catch(err => next(err));
+            .populate('author')
+                .then(task => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(task);
+                })
+                .catch(err => next(err));
     })
     .post(authenticate.verifyUser, (req, res) => {
         res.statusCode = 403;
