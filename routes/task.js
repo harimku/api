@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const Task = require('../models/task');
 const authenticate = require('../authenticate');
+const { db } = require('../models/task');
 
 const taskRouter = express.Router();
 
@@ -10,7 +11,8 @@ taskRouter.use(bodyParser.json());
 taskRouter
     .route('/')
     .get(authenticate.verifyUser, (req, res, next) => {
-        Task.find()   //returns promise
+        //Task.find()   //returns promise
+        Task.find({"author": req.user._id})   //returns tasks written by the current user
             .populate('author')
                 .then(tasks => {
                     res.statusCode = 200;
