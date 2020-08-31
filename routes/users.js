@@ -6,62 +6,64 @@ const authenticate = require('../authenticate');
 
 const userRouter = express.Router();
 userRouter.use(bodyParser.json());
+userRouter.get('/', authenticate.verifyUser, authenticate.verifyAdmin, getUsers);
+userRouter.post('/signup', registerUser);
+userRouter.post('/login', passport.authenticate('local'), loginUser);
+userRouter.get('/logout', logoutUser);
 
-userRouter
-    .route('/')
-    .get(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
-        User.find()
-            .then((users) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(users);
-            })
-            .catch((err) => next(err));
-    });
+async function getUsers (req, res) {
+    try {
+        const users = await User.find();
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(500).json(`Could not find user!`)
+    }
+}   
+      
+async function registerUser (req, res) {
+    try {
+        const user = await User.register(new User({ 
+            username: req.body.username, 
+            firstname: req.body.firstname,
+            lastname: req.body.lastname,
+            email: req.body.email
+        }),
+        req.body.password);
+        const saved = await user.save;
+        passport.authenticate('local')(req, res, () => {
+            res.status(200).json({ success: true, status: 'Registration Successful!' });
+        });
+    } catch {
+        res.status(500).json(`Could not register user!`)
+    }
+}
 
-userRouter
-    .route('/signup')
-    .post((req, res) => {
-        User.register(
-            new User({ username: req.body.username, firstname: req.body.firstname, lastname: req.body.lastname }),
-            req.body.password,
-            err => {
-                if (err) {
-                    res.statusCode = 500;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json({err: err});
-                } else {
-                    passport.authenticate('local')(req, res, () => {
-                        res.statusCode = 200;
-                        res.setHeader('Content-Type', 'application/json');
-                        res.json({success: true, status: 'Registration Successful!'});
-                    })
-                }
-            }
-        );
-    });
- 
-userRouter
-    .route('/login')
-    .post(passport.authenticate('local'), (req, res) => {
-        const token = authenticate.getToken({_id: req.user._id});
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        res.json({success: true, token: token, status: 'You are successfully logged in!'});
-    })
+async function loginUser (req, res) {
+    try {
+        const token = authenticate.getToken({ _id: req.user._id });
+        res.status(200).json({
+            success: true,
+            token: token,
+            status: 'You are successfully logged in!',
+        });
+    } catch (err) {
+        res.status(500).json(`Could not log in user!`)
+    }
+}
 
-userRouter
-    .route('/logout')
-    .get((req, res, next) => {
+async function logoutUser (req, res) {
+    try {
         if (req.session) {  //JWT 
             req.session.destroy();
             res.clearCookie('session-id');
             res.redirect('/');
+            res.status(200);
         } else {
-            const err = new Error('You are not logged in');
-            err.status = 401;
-            return next(err);
+            res.status(401).json(`You are not logged in!`);
         }
-    });
+    } catch (err) {
+        res.status(500).json(`Could not log out!`);
+    }
+}
 
 module.exports = userRouter;

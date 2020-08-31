@@ -2,123 +2,106 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const Task = require('../models/task');
 const authenticate = require('../authenticate');
-const { db } = require('../models/task');
 
 const taskRouter = express.Router();
 
 taskRouter.use(bodyParser.json());
+taskRouter.get('/', authenticate.verifyUser, getTasks)
+taskRouter.post('/', authenticate.verifyUser, postTasks)
+taskRouter.put('/', authenticate.verifyUser, putTasks)
+taskRouter.delete('/', authenticate.verifyUser, deleteTasks)
+taskRouter.get('/:taskId', authenticate.verifyUser, getTask)
+taskRouter.post('/:taskId', authenticate.verifyUser, postTask)
+taskRouter.put('/:taskId', authenticate.verifyUser, putTask)
+taskRouter.delete('/:taskId', authenticate.verifyUser, deleteTask)
 
-taskRouter
-    .route('/')
-    .get(authenticate.verifyUser, (req, res, next) => {
-        Task.find({ user: req.user._id })
-            .populate('user')
-                .then(tasks => {
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.json(tasks);
-                })
-                .catch(err => next(err));   //pass err off to the overall error handler for this express application
-    })
-    .post(authenticate.verifyUser, (req, res, next) => {
+async function getTasks (req, res) {
+    try {
+        const tasks = await Task.find({ user: req.user._id }).populate('user');
+        res.status(200).json(tasks);
+    } catch (err) {
+        res.status(500).json('Could not find tasks!');
+    }
+}
+
+async function postTasks (req, res) {
+    try {
         req.body.user = req.user._id;
-        Task.create(req.body)   //returns promise (mongoose checks if data fits schema)
-            .then(task => {
-                console.log('Task Created: ', task);
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(task);
-            })
-            .catch(err => next(err));
-    })
-    .put(authenticate.verifyUser, (req, res) => {
-        res.statusCode = 403;  //operation not supported
-        res.end('PUT operation not supported on /tasks');
-    })
-    .delete(authenticate.verifyUser, (req, res, next) => {
-        Task.deleteMany({ user: req.user._id })
-            .then(response => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(response);
-            })
-            .catch(err => next(err));
-    });
+        const task = await Task.create(req.body);
+        res.status(200).json(task);
+    } catch (err) {
+        res.status(500).json('Could not post tasks!');
+    }
+}
 
-taskRouter
-    .route('/:taskId')
-    .get(authenticate.verifyUser, (req, res, next) => {
-        Task.findById(req.params.taskId)
-            .then(task => {
-                if (task) {
-                    if (task.user._id.equals(req.user._id)) {
-                        res.statusCode = 200;
-                        res.setHeader('Content-Type', 'application/json');
-                        res.json(task);
-                    } else {
-                        res.statusCode = 403;
-                        res.end('This is not your task!');
-                    }
-                } else {
-                    res.statusCode = 403;
-                    res.end('Task does not exist!');
-                }
-            })
-            .catch(err => next(err));
-    })
-    .post(authenticate.verifyUser, (req, res) => {
-        res.statusCode = 403;
-        res.end(`POST operation not supported on /tasks/${req.params.taskId}`);
-    })
-    .put(authenticate.verifyUser, (req, res, next) => {
-        Task.findById(req.params.taskId)
-            .then(task => {
-                if (task) {
-                    if (task.user._id.equals(req.user._id)) {
-                        Task.findByIdAndUpdate(
-                            req.params.taskId, 
-                            { $set: req.body }, 
-                            { new: true }
-                        )
-                            .then(task => {
-                                res.statusCode = 200;
-                                res.setHeader('Content-Type', 'application/json');
-                                res.json(task);
-                            })
-                            .catch(err => next(err));
-                    } else {
-                        res.statusCode = 403;
-                        res.end('This is not your task!');
-                    }
-                } else {
-                    res.statusCode = 403;
-                    res.end('Task does not exist!');
-                }
-            })
-            .catch(err => next(err));
-    })
-    .delete(authenticate.verifyUser, (req, res, next) => {
-        Task.findById(req.params.taskId)
-            .then(task => {
-                if (task) {
-                    if (task.user._id.equals(req.user._id)) {
-                        Task.findByIdAndDelete(req.params.taskId)
-                            .then(response => {
-                                res.statusCode = 200;
-                                res.setHeader('Content-Type', 'application/json');
-                                res.json(response);
-                            })
-                            .catch(err => next(err));
-                    } else {
-                        res.statusCode = 403;
-                        res.end('This is not your task!');
-                    }
-                } else {
-                    res.statusCode = 403;
-                    res.end('Task does not exist!');
-                }
-            })
-            .catch(err => next(err));
-    });
+async function putTasks (req, res) {
+    try {
+        res.status(403).end(`PUT operation not supported on /tasks`);
+    } catch (err) {
+        res.status(500).json(`Could not update tasks!`)
+    }
+}
+
+async function deleteTasks (req, res) {
+    try {
+        const response = await Task.deleteMany({ user: req.user._id });
+        res.status(200).json(response);
+    } catch (err) {
+        res.status(500).json(`Could not delete tasks!`);
+    }
+}
+
+async function getTask (req, res) {
+    try {
+        const task = await Task.findById(req.params.taskId);
+        if (task.user._id.equals(req.user._id)) {
+            res.status(200).json(task);
+        } else {
+            res.status(403).json('This is not your task!');
+        }
+    } catch (err) {
+        res.status(500).json(`Could not find task!`);
+    }
+}
+
+async function postTask(req, res) {
+    try {
+        res.status(403).end(`POST operation not supported on /tasks/${req.params.taskId}`);
+    } catch (err) {
+        res.status(500).json(`Could not post task!`);
+    }
+}
+
+async function putTask(req, res) {
+    try {
+        const task = await Task.findById(req.params.taskId);
+        if (task.user._id.equals(req.user._id)) {
+            const checked = await Task.findByIdAndUpdate(
+                                        req.params.taskId, 
+                                        { $set: req.body }, 
+                                        { new: true }
+                                    );
+            res.status(200).json(checked);
+        } else {
+            res.status(403).json('This is not your task!');
+        }
+    } catch (err) {
+        res.status(500).json(`Could not update task!`);
+    }
+}
+
+async function deleteTask(req, res) {
+    try {
+        const task = await Task.findById(req.params.taskId);
+        if (task.user._id.equals(req.user._id)) {
+            const response = await Task.findByIdAndDelete(req.params.taskId);
+            res.status(200).json(response);
+        } else {
+            res.status(403).end('This is not your task!');
+        }
+    } catch (err) {
+        res.status(500).json(`Could not delete task!`);
+    }
+}
 
 module.exports = taskRouter; 
