@@ -3,13 +3,14 @@ const bodyParser = require('body-parser');
 const User = require('../models/user');
 const passport = require('passport');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const userRouter = express.Router();
 userRouter.use(bodyParser.json());
-userRouter.get('/', authenticate.verifyUser, authenticate.verifyAdmin, getUsers);
-userRouter.post('/signup', registerUser);
-userRouter.post('/login', passport.authenticate('local'), loginUser);
-userRouter.get('/logout', logoutUser);
+userRouter.get('/', cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, getUsers);
+userRouter.post('/signup', cors.corsWithOptions, registerUser);
+userRouter.post('/login', cors.corsWithOptions, passport.authenticate('local'), loginUser);
+userRouter.get('/logout', cors.corsWithOptions, logoutUser);
 
 async function getUsers (req, res) {
     try {
@@ -18,7 +19,7 @@ async function getUsers (req, res) {
     } catch (err) {
         res.status(500).json(`Could not find user!`)
     }
-}   
+}
       
 async function registerUser (req, res) {
     try {

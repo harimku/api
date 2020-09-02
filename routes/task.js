@@ -2,18 +2,20 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const Task = require('../models/task');
 const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const taskRouter = express.Router();
 
 taskRouter.use(bodyParser.json());
-taskRouter.get('/', authenticate.verifyUser, getTasks)
-taskRouter.post('/', authenticate.verifyUser, postTasks)
-taskRouter.put('/', authenticate.verifyUser, putTasks)
-taskRouter.delete('/', authenticate.verifyUser, deleteTasks)
-taskRouter.get('/:taskId', authenticate.verifyUser, getTask)
-taskRouter.post('/:taskId', authenticate.verifyUser, postTask)
-taskRouter.put('/:taskId', authenticate.verifyUser, putTask)
-taskRouter.delete('/:taskId', authenticate.verifyUser, deleteTask)
+taskRouter.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+taskRouter.get('/', cors.cors, authenticate.verifyUser, getTasks)
+taskRouter.post('/', cors.corsWithOptions, authenticate.verifyUser, postTasks)
+taskRouter.put('/', cors.corsWithOptions, authenticate.verifyUser, putTasks)
+taskRouter.delete('/', cors.corsWithOptions, authenticate.verifyUser, deleteTasks)
+taskRouter.get('/:taskId', cors.cors, authenticate.verifyUser, getTask)
+taskRouter.post('/:taskId', cors.corsWithOptions, authenticate.verifyUser, postTask)
+taskRouter.put('/:taskId', cors.corsWithOptions, authenticate.verifyUser, putTask)
+taskRouter.delete('/:taskId', cors.corsWithOptions, authenticate.verifyUser, deleteTask)
 
 async function getTasks (req, res) {
     try {
